@@ -25,6 +25,13 @@ This project uses GSD (Get Shit Done) planning workflow.
 4. `/gsd-discuss-phase 4` → GitHub repo + docs + test scripts
 5. Phase 5 — Voice HAT (deferred)
 
+## Pi Access & File Workflow
+
+- SSH: `javi@map.local`
+- Write code locally in VSCode, push to `github.com/saraayala1/maps`
+- User copies files to the Pi manually — do NOT automate Pi file transfer in plans
+- Test scripts live in VSCode (local), GitHub, and on the Pi
+
 ## Key Rules
 
 - All code goes to `github.com/saraayala1/maps`

@@ -16,7 +16,7 @@ The light strip turns on automatically and shows the right weather color and con
 
 ### Active
 
-- [ ] Light strip displays temperature zone as a base color (avg of current + next 4h via OpenWeatherMap)
+- [ ] Light strip displays temperature zone as a base color (avg of current + next 4h via Weatherbit / Open-Meteo fallback)
 - [ ] Rain/drizzle condition (API codes) triggers a drip/pulse animation over the base color
 - [ ] Storm/thunder condition triggers a flash/lightning animation over the base color
 - [ ] Clear/sunny condition shows a slow breathe effect
@@ -36,11 +36,13 @@ The light strip turns on automatically and shows the right weather color and con
 
 ## Context
 
-- **Hardware:** Raspberry Pi with an LED light strip already wired and working (existing test script shows solid white)
-- **Library:** TBD — to be confirmed when accessing the Pi in Phase 1 (likely rpi_ws281x or NeoPixel)
-- **Location:** Single fixed location; OpenWeatherMap API key required
+- **Hardware:** Raspberry Pi with a 144-LED DotStar strip (SPI: `board.SCLK` / `board.MOSI`), already wired and working
+- **Library:** `adafruit_dotstar` — confirmed working from test script (`pixels.fill()` fills all 144 LEDs at once)
+- **Display model:** Entire strip shows one color at a time (no per-segment addressing); animations use brightness cycling and fill patterns
+- **Location:** Single fixed location; Weatherbit API key required (same key as vite-react site)
 - **Weather logic:** Fetch current conditions + 4-hour forecast; average temp across all data points; conditions are boolean (if any data point in range has the condition, it's active)
 - **Condition priority:** Storm > Rain > Clear/Sunny as base animation; Wind pulse overlays on top of all
+- **Existing code reference:** `https://github.com/saraayala1/vite-react` — reuse API fetch pattern (`api.ts`), condition code logic (`utils.ts`), and Weatherbit/Open-Meteo fallback pattern
 
 ## Temperature → Color Mapping
 
@@ -55,12 +57,14 @@ The light strip turns on automatically and shows the right weather color and con
 
 ## Weather Condition → Animation
 
-| Condition | Trigger | Animation |
-|-----------|---------|-----------|
-| Clear / Sunny | OWM clear sky codes | Slow breathe (base color) |
-| Rain / Drizzle | OWM rain/drizzle codes | Drip/pulse animation |
-| Storm / Thunder | OWM thunderstorm codes | Flash/lightning effect |
-| High Wind | Wind speed > 15 mph | White pulse on top of base color |
+Uses Weatherbit condition codes (same as vite-react site), with Open-Meteo WMO codes as fallback.
+
+| Condition | Weatherbit codes | WMO fallback | Animation |
+|-----------|-----------------|--------------|-----------|
+| Clear / Sunny | 800 | 0–1 | Slow breathe (base color) |
+| Rain / Drizzle | 300–399, 500–599 | 51–65, 80–82 | Drip/pulse animation |
+| Storm / Thunder | 200–299 | 95–99 | Flash/lightning effect |
+| High Wind | wind_spd > 15 mph | wind_speed_10m > 15 mph | White pulse on top of base color |
 
 ## Schedule
 
@@ -81,15 +85,18 @@ The strip also turns on immediately at boot (any time of day).
 ## Constraints
 
 - **Hardware:** Raspberry Pi — Python-based control; GPIO/PWM constraints apply to LED strip
-- **API:** OpenWeatherMap free tier — rate limits apply; cache responses to avoid hitting limits
+- **API:** Weatherbit (primary, requires `WEATHERBIT_API_KEY` env var) + Open-Meteo (free fallback, no key needed) — same pattern as vite-react site
 - **Boot behavior:** Must auto-start without SSH or manual login after power cycle
+- **SSH access:** `javi@map.local` — Pi is reachable on local network for testing and cron setup
+- **File workflow:** Code is written locally (VSCode) and pushed to GitHub; user copies files to Pi manually — plans should not automate Pi file transfer
+- **GitHub:** All code, docs, and test scripts live at https://github.com/saraayala1/maps
 - **Phase 5 dependency:** Voice HAT (ReSpeaker or similar) not yet attached — voice command integration deferred
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| OpenWeatherMap as weather API | Free tier, easy key setup, good condition codes | — Pending |
+| Weatherbit + Open-Meteo fallback | Matches vite-react site; reuse existing API key and condition code logic | — Pending |
 | 4-hour forecast window | Enough warning without over-predicting; user-specified | — Pending |
 | Average temp across forecast window | Smooths out short spikes; user-specified | — Pending |
 | Boolean conditions (any hit = show it) | Simpler logic; if it might rain, show rain | — Pending |
