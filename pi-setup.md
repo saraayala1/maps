@@ -52,31 +52,67 @@ Find your coordinates at https://www.latlong.net/
 
 Get a free API key at https://www.weatherbit.io/account/create
 
-Set the environment variable before running:
+Create `~/.env` on the Pi with your key:
 ```bash
-export WEATHERBIT_API_KEY="your_key_here"
+echo 'WEATHERBIT_API_KEY=your_key_here' > ~/.env
+chmod 600 ~/.env
 ```
 
-For persistence, add to `~/.bashrc`:
+> The boot wrapper (`start_weather.sh`) sources this file automatically. Do not use quotes around the value.
+
+### 6. Copy Scripts to the Pi
+
 ```bash
-echo 'export WEATHERBIT_API_KEY="your_key_here"' >> ~/.bashrc
-source ~/.bashrc
+scp weather_lights.py javi@map.local:/home/javi/weather_lights.py
+scp start_weather.sh javi@map.local:/home/javi/start_weather.sh
+chmod +x /home/javi/start_weather.sh
 ```
 
-### 6. Verify Hardware
+### 7. Verify Hardware
 
-Copy `weather_lights.py` to the Pi and run the hardware test:
+Run the hardware test:
 ```bash
-python3 weather_lights.py --test-hardware
+ssh javi@map.local "python3 weather_lights.py --test-hardware"
 ```
 
 The strip should fill green for 2 seconds, then go dark. If you get a
 `PermissionError`, re-check step 2 (groups) and reboot.
 
-## Running the Script
+### 8. Wire Up Auto-Start (cron @reboot)
+
+Add the boot entry to javi's crontab:
+```bash
+ssh javi@map.local "crontab -e"
+```
+
+Add this line at the bottom:
+```
+@reboot /home/javi/start_weather.sh >> /home/javi/weather_lights.log 2>&1
+```
+
+Save and exit. Verify it saved:
+```bash
+ssh javi@map.local "crontab -l"
+```
+
+## Running Manually
 
 ```bash
-python3 weather_lights.py
+ssh javi@map.local "/home/javi/start_weather.sh"
+```
+
+Or directly without the wrapper (requires `WEATHERBIT_API_KEY` already exported):
+```bash
+ssh javi@map.local "python3 weather_lights.py"
 ```
 
 Runs indefinitely, refreshing weather every hour. Press Ctrl+C to stop.
+
+## Checking the Log
+
+After a boot or manual start, tail the log to confirm it's running:
+```bash
+ssh javi@map.local "tail -20 ~/weather_lights.log"
+```
+
+The log shows the fetched temperature and active conditions on each hourly refresh.
