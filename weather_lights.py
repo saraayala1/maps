@@ -270,6 +270,45 @@ def wind_tick(base_rgb, t):
     )
 
 
+def animation_tick(base_rgb, t, has_rain, has_storm, has_clear, has_wind, is_extreme_heat):
+    """
+    Apply all active animations in D-09 priority order:
+      Wind overlay > Lightning burst > Rain pulse > Breathe > Base color
+
+    Rules:
+    - Breathe is suppressed when rain or storm is active (D-07 / research note: avoids double-dimming).
+    - Wind always overlays regardless of other conditions (D-08).
+    - Extreme heat (100°F+) flashes between COLOR_RED_FLASH and off every 0.5s; wind still overlays (D-08).
+    """
+    rgb = base_rgb
+
+    # Extreme heat: flash between red and off
+    if is_extreme_heat:
+        flash_on = (int(t / 0.5) % 2) == 0
+        rgb = COLOR_RED_FLASH if flash_on else (0, 0, 0)
+        if has_wind:
+            rgb = wind_tick(rgb, t)
+        return rgb
+
+    # Layer 4 (lowest): Breathe — clear/sunny only, suppressed by rain/storm
+    if has_clear and not has_rain and not has_storm:
+        rgb = breathe_tick(rgb, t)
+
+    # Layer 3: Rain drip pulse
+    if has_rain:
+        rgb = rain_tick(rgb, t)
+
+    # Layer 2: Lightning burst (stacks on rain when both active — D-07)
+    if has_storm:
+        rgb = lightning_tick(rgb, t)
+
+    # Layer 1 (highest priority): Wind white pulse (D-08: always fires if wind > 15 mph)
+    if has_wind:
+        rgb = wind_tick(rgb, t)
+
+    return rgb
+
+
 # ── Hardware Init ─────────────────────────────────────────────────────────────
 def init_strip():
     """Initialize the DotStar strip. Caller owns the returned object."""
@@ -302,8 +341,8 @@ def main():
     pixels = init_strip()
 
     # State
-    last_fetch_time = -FETCH_INTERVAL   # triggers immediate fetch on first iteration
-    base_color      = get_season_color()  # D-11: season default until first fetch
+    last_fetch_time = -FETCH_INTERVAL   # negative triggers immediate fetch on first pass
+    base_color      = get_season_color()  # D-11: season default until first successful fetch
     has_rain        = False
     has_storm       = False
     has_clear       = False
@@ -320,25 +359,33 @@ def main():
             if now - last_fetch_time >= FETCH_INTERVAL:
                 raw = fetch_weather()
                 if raw is None:
-                    raw = fetch_open_meteo()   # D-10 fallback
+                    raw = fetch_open_meteo()
 
                 if raw is not None:
                     avg_temp, has_rain, has_storm, has_clear, has_wind = \
                         average_conditions(raw)
                     base_color      = temp_to_color(avg_temp)
                     last_fetch_time = now
+                    _lightning["next_at"]   = 0.0   # reschedule on new conditions
+                    _lightning["flash_end"] = 0.0
                     print(f"[{datetime.now():%H:%M:%S}] "
                           f"Temp: {avg_temp:.1f}°F  "
                           f"rain={has_rain} storm={has_storm} "
                           f"clear={has_clear} wind={has_wind}")
                 else:
-                    # D-10: hold last state; D-12: log failure
+                    # D-10: hold last known color/flags; D-12: log to stderr
                     print(f"[{datetime.now():%H:%M:%S}] Fetch failed — "
                           f"holding last state.", file=sys.stderr)
-                    last_fetch_time = now   # avoid hammering API on failure
+                    last_fetch_time = now   # avoid hammering API on repeated failure
 
-            # ── Display base color (animations added in Plan 03) ─────────────
-            fill_color(pixels, base_color)
+            # ── Animation frame (D-02: strip never static) ───────────────────
+            is_extreme_heat = (base_color == COLOR_RED_FLASH)
+            animated_rgb = animation_tick(
+                base_color, now,
+                has_rain, has_storm, has_clear, has_wind,
+                is_extreme_heat,
+            )
+            fill_color(pixels, animated_rgb)
             time.sleep(FRAME_INTERVAL)
 
     except KeyboardInterrupt:
