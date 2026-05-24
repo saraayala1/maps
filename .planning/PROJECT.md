@@ -12,7 +12,7 @@ The light strip turns on automatically and shows the right weather color and con
 
 ### Validated
 
-(None yet — ship to validate)
+- [x] Script auto-starts on boot via cron @reboot — LED strip lights up within 2 min of power cycle (Phase 2, 2026-05-24)
 
 ### Active
 
@@ -121,4 +121,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-24 after initialization*
+*Last updated: 2026-05-24 after Phase 2 completion*
