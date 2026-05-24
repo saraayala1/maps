@@ -7,7 +7,7 @@ Four phases deliver a fully autonomous LED weather display. Phase 1 builds the c
 ## Phases
 
 - [ ] **Phase 1: Weather Display** - Script fetches weather and drives the LED strip with the correct color and animation
-- [ ] **Phase 2: Boot Auto-Start** - Script launches automatically on every Pi boot with no manual intervention
+- [x] **Phase 2: Boot Auto-Start** - Script launches automatically on every Pi boot with no manual intervention *(2026-05-24)*
 - [ ] **Phase 3: Schedule On/Off** - Strip turns on at 7 AM daily and turns off per the weekly schedule
 - [ ] **Phase 4: GitHub Repo** - All code, docs, and test scripts published to github.com/saraayala1/maps
 - [ ] **Phase 5: Voice Control (v2 — pinned)** - "Map On" / "Map Off" voice commands via ReSpeaker HAT
@@ -49,7 +49,10 @@ Wave 4 *(blocked on Wave 3 completion)*
 **Success Criteria** (what must be TRUE):
   1. After a full power cycle (unplug and replug), the LED strip begins showing weather colors within a reasonable startup window (under 2 minutes), with no keyboard or SSH interaction
   2. The `@reboot` cron entry is visible in `crontab -l` and points to the correct script path
-**Plans**: TBD
+**Plans**: 1 plan
+
+Wave 1 *(no prior dependency within phase)*
+- Plan 02-01: Create start_weather.sh wrapper + guide cron setup on Pi
 
 ### Phase 3: Schedule On/Off
 **Goal**: The strip turns on every morning at 7 AM and turns off automatically at the correct time for each day of the week
@@ -89,7 +92,7 @@ Wave 4 *(blocked on Wave 3 completion)*
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Weather Display | 0/4 | Ready to execute | - |
-| 2. Boot Auto-Start | 0/? | Not started | - |
+| 2. Boot Auto-Start | 1/1 | Complete | 2026-05-24 |
 | 3. Schedule On/Off | 0/? | Not started | - |
 | 4. GitHub Repo | 0/? | Not started | - |
 | 5. Voice Control (v2) | 0/? | Deferred | - |

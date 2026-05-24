@@ -19,7 +19,7 @@
 
 ### Boot & Schedule
 
-- [ ] **SCHED-01**: Script launches automatically on every Pi boot with no manual intervention (`@reboot` cron entry)
+- [x] **SCHED-01**: Script launches automatically on every Pi boot with no manual intervention (`@reboot` cron entry)
 - [ ] **SCHED-02**: Script turns the strip ON every day at 7:00 AM (cron)
 - [ ] **SCHED-03**: Script turns the strip OFF on schedule:
   - Monday, Tuesday, Thursday, Friday → 9:00 AM
@@ -55,7 +55,7 @@
 | LIGHT-04 | Phase 1: Weather Display | Pending |
 | LIGHT-05 | Phase 1: Weather Display | Pending |
 | LIGHT-06 | Phase 1: Weather Display | Pending |
-| SCHED-01 | Phase 2: Boot Auto-Start | Pending |
+| SCHED-01 | Phase 2: Boot Auto-Start | Complete (2026-05-24) |
 | SCHED-02 | Phase 3: Schedule On/Off | Pending |
 | SCHED-03 | Phase 3: Schedule On/Off | Pending |
 | REPO-01 | Phase 4: GitHub Repo | Pending |
