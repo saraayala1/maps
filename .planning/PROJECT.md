@@ -23,6 +23,7 @@ The light strip turns on automatically and shows the right weather color and con
 - [ ] Wind > 15 mph pulses white ON TOP of the current temp color and condition animation
 - [ ] All weather conditions are evaluated as boolean for the next 4 hours (if occurring, show it)
 - [ ] Script auto-starts on boot via cron job (no manual intervention needed)
+- [ ] Script writes current temperature + conditions to `/home/javi/weather_status` each loop (cat-able status file)
 - [ ] Script auto-turns on every day at 7:00 AM via cron job
 - [ ] Script auto-shuts off on schedule: Mon/Tue/Thu/Fri at 9am, Wed at 4pm, Sat/Sun at 6pm
 - [ ] Code hosted in a GitHub repo with documentation and test scripts

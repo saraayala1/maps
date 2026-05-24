@@ -20,6 +20,7 @@
 ### Boot & Schedule
 
 - [x] **SCHED-01**: Script launches automatically on every Pi boot with no manual intervention (`@reboot` cron entry)
+- [ ] **STATUS-01**: On each weather fetch loop, the script writes a one-line status to `/home/javi/weather_status` (overwrite each cycle) — contents: timestamp, temperature (°F), temp zone label, active conditions, current strip color. User can `cat ~/weather_status` while the Pi is running to see what it last computed.
 - [ ] **SCHED-02**: Script turns the strip ON every day at 7:00 AM (cron)
 - [ ] **SCHED-03**: Script turns the strip OFF on schedule:
   - Monday, Tuesday, Thursday, Friday → 9:00 AM
@@ -56,6 +57,7 @@
 | LIGHT-05 | Phase 1: Weather Display | Pending |
 | LIGHT-06 | Phase 1: Weather Display | Pending |
 | SCHED-01 | Phase 2: Boot Auto-Start | Complete (2026-05-24) |
+| STATUS-01 | Phase 4: GitHub Repo (or Phase 1 gap) | Pending |
 | SCHED-02 | Phase 3: Schedule On/Off | Pending |
 | SCHED-03 | Phase 3: Schedule On/Off | Pending |
 | REPO-01 | Phase 4: GitHub Repo | Pending |
