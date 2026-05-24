@@ -191,6 +191,85 @@ def temp_to_color(temp_f):
         return COLOR_RED_FLASH   # 100°F+
 
 
+# ── Animations ────────────────────────────────────────────────────────────────
+# All animation functions take (base_rgb: tuple, t: float) and return a modified
+# RGB tuple. NEVER call pixels.brightness here — scale tuple values instead to
+# avoid double SPI writes (auto_write=False pattern from adafruit_dotstar source).
+
+def breathe_tick(base_rgb, t):
+    """
+    Slow sinusoidal breathe for clear/sunny conditions (LIGHT-05, D-03).
+    4-second cycle: brightness 100% → 60% → 100%.
+    """
+    cycle  = (t % BREATHE_PERIOD) / BREATHE_PERIOD
+    factor = (BREATHE_MIN_FACTOR
+              + (1.0 - BREATHE_MIN_FACTOR)
+              * (0.5 + 0.5 * math.cos(2 * math.pi * cycle)))
+    r, g, b = base_rgb
+    return (int(r * factor), int(g * factor), int(b * factor))
+
+
+def rain_tick(base_rgb, t):
+    """
+    Rhythmic brightness drip for rain/drizzle conditions (LIGHT-03, D-05).
+    1-second triangle-wave cycle: brightness 100% → 50% → 100%.
+    """
+    cycle = (t % RAIN_PERIOD) / RAIN_PERIOD
+    if cycle < 0.5:
+        factor = 1.0 - (1.0 - RAIN_MIN_FACTOR) * (cycle / 0.5)    # drop 1.0 → 0.5
+    else:
+        factor = RAIN_MIN_FACTOR + (1.0 - RAIN_MIN_FACTOR) * ((cycle - 0.5) / 0.5)  # rise 0.5 → 1.0
+    r, g, b = base_rgb
+    return (int(r * factor), int(g * factor), int(b * factor))
+
+
+# Module-level lightning state (dict avoids the `global` keyword)
+_lightning = {
+    "next_at":   0.0,   # monotonic time of next scheduled flash
+    "flash_end": 0.0,   # monotonic time when current flash ends
+}
+
+
+def lightning_tick(base_rgb, t):
+    """
+    Occasional lightning burst for thunderstorm conditions (LIGHT-04, D-04).
+    Fires 1-2 times per minute at random intervals.
+    During flash: returns (255, 255, 255). Between flashes: returns base_rgb.
+    """
+    if _lightning["next_at"] == 0.0:
+        # First call — schedule the initial flash
+        _lightning["next_at"] = t + random.uniform(LIGHTNING_MIN_GAP, LIGHTNING_MAX_GAP)
+
+    if t >= _lightning["next_at"]:
+        if t < _lightning["flash_end"] + LIGHTNING_DUR:
+            return (255, 255, 255)   # actively flashing
+        # Start a new flash and schedule the next one
+        _lightning["flash_end"] = t
+        _lightning["next_at"]   = (t + LIGHTNING_DUR
+                                   + random.uniform(LIGHTNING_MIN_GAP, LIGHTNING_MAX_GAP))
+        return (255, 255, 255)
+
+    return base_rgb
+
+
+def wind_tick(base_rgb, t):
+    """
+    Dominant wind white pulse overlay (LIGHT-06, D-06).
+    Sinusoidal pulse toward white on WIND_PULSE_PERIOD cycle.
+    Peak lerp factor is WIND_LERP (0.70) — strip unmistakably shifts toward white.
+    """
+    cycle = (t % WIND_PULSE_PERIOD) / WIND_PULSE_PERIOD
+    pulse = 0.5 + 0.5 * math.sin(2 * math.pi * cycle - math.pi / 2)
+    lerp  = WIND_LERP * pulse   # 0.0 at trough, 0.70 at peak
+
+    r, g, b = base_rgb
+    return (
+        r + int((255 - r) * lerp),
+        g + int((255 - g) * lerp),
+        b + int((255 - b) * lerp),
+    )
+
+
 # ── Hardware Init ─────────────────────────────────────────────────────────────
 def init_strip():
     """Initialize the DotStar strip. Caller owns the returned object."""
