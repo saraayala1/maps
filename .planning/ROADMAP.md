@@ -25,7 +25,21 @@ Four phases deliver a fully autonomous LED weather display. Phase 1 builds the c
   3. Rain or drizzle in the forecast triggers a visible drip/pulse brightness animation overlaid on the base color
   4. A thunderstorm in the forecast triggers a flash/lightning animation overlaid on the base color
   5. Clear/sunny forecast shows a slow breathe effect; wind > 15 mph adds a white pulse on top of whatever animation is running
-**Plans**: TBD
+**Plans**: 01-01-PLAN.md, 01-02-PLAN.md, 01-03-PLAN.md, 01-04-PLAN.md
+
+Wave 1 *(no prior dependency)*
+- Plan 01-01: Script foundation — constants, hardware init, pi-setup.md
+
+Wave 2 *(blocked on Wave 1 completion)*
+- Plan 01-02: Weather fetch + temperature color loop (Weatherbit + Open-Meteo, average_conditions, temp_to_color, main)
+
+Wave 3 *(blocked on Wave 2 completion)*
+- Plan 01-03: Animation functions — breathe, rain drip, lightning burst, wind pulse
+
+Wave 4 *(blocked on Wave 3 completion)*
+- Plan 01-04: Animation compositor (animation_tick) + full animated main loop
+
+**Cross-cutting constraints:** `auto_write=False` on DotStar init (all plans); scale RGB tuples for brightness (never set `pixels.brightness` in animation code); imperial units throughout (°F, mph)
 
 ### Phase 2: Boot Auto-Start
 **Goal**: The weather display script runs automatically every time the Pi powers on, with no SSH or manual login required
@@ -74,7 +88,7 @@ Four phases deliver a fully autonomous LED weather display. Phase 1 builds the c
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Weather Display | 0/? | Not started | - |
+| 1. Weather Display | 0/4 | Ready to execute | - |
 | 2. Boot Auto-Start | 0/? | Not started | - |
 | 3. Schedule On/Off | 0/? | Not started | - |
 | 4. GitHub Repo | 0/? | Not started | - |

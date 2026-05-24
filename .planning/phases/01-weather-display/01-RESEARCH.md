@@ -540,7 +540,7 @@ if avg_temp >= 100:
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Latitude/longitude for the weather fetch**
    - What we know: Script needs a fixed lat/lon for the single location
