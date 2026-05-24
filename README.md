@@ -1,32 +1,43 @@
 # Pi Weather Lights
 
-A 144-LED DotStar strip that shows live weather for New Port Richey, FL at a glance. The strip fills with a single color based on temperature, then layers an animation on top if there's active weather.
+A 144-LED DotStar strip that shows live weather for New Port Richey, FL at a glance.
 
-## Colors (Temperature)
+## What you see
+
+**When it's raining (or rain is likely):** the strip goes deep blue. That's the main signal — blue means weather is coming.
+
+**When there's a thunderstorm:** deep blue with yellow flashes once every 30 seconds.
+
+**When it's windy (10+ mph):** the brightness slowly breathes up and down over a 60-second cycle, whatever color is showing.
+
+**Otherwise:** solid color based on temperature (see below).
+
+## Temperature Colors
+
+Shown when there's no active rain or storm.
 
 | Color | Temperature |
 |-------|-------------|
-| 🔵 Deep Blue | Below 60°F |
-| 🩵 Cyan | 60–70°F |
-| 🟢 Green | 70–80°F |
+| 🩵 Cyan | Below 69°F |
+| 🟢 Green | 69–80°F |
 | 🟠 Orange | 80–90°F |
 | 🔴 Red | 90–99°F |
 | 🔴 Flashing Red | 100°F+ |
 
-## Animations (Weather Conditions)
+## Condition Display
 
-Animations layer on top of the base color. Multiple can be active at once.
+Conditions override the temperature color. Rain always wins.
 
 | What you see | What it means |
 |---|---|
-| Rhythmic brightness dip (~1s cycle) | Rain or drizzle in the forecast |
-| Occasional white flash | Thunderstorm in the forecast |
-| Pulsing toward white (~1.5s cycle) | Wind over 15 mph |
-| Solid color, no animation | Clear skies |
+| Deep blue (solid) | Rain or drizzle likely in the next 4 hours (precip > 10%) |
+| Deep blue + yellow flash every 30s | Thunderstorm in the forecast |
+| Slow brightness breathe (70–100%) | Wind over 10 mph |
+| Solid color, no animation | No active conditions |
 
-Wind always shows on top of everything else — if it's both stormy and windy, you'll see lightning flashes on a white-pulsing strip.
+Wind breathes on top of whatever color is showing — if it's rainy and windy, you'll see the blue breathing up and down.
 
-Temperature and conditions are averaged across the current hour plus the next 4 hours, so the strip reflects what's coming, not just what's happening right now.
+Weather is checked once per hour using the current conditions plus the next 4 hours of forecast, so the strip reflects what's coming, not just what's happening right now.
 
 ## Setup
 
