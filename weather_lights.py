@@ -38,9 +38,6 @@ COLOR_RED_FLASH = (255, 0,   0)     # 100°F+ (flashing mode — handled in anim
 FETCH_INTERVAL      = 3600    # seconds between weather fetches (60 min)
 FRAME_INTERVAL      = 0.05    # seconds per animation frame (20 fps)
 
-BREATHE_PERIOD      = 4.0     # seconds for one full breathe cycle (D-03)
-BREATHE_MIN_FACTOR  = 0.6     # brightness floor for breathe (60%)
-
 RAIN_PERIOD         = 1.0     # seconds for one rain pulse cycle (D-05)
 RAIN_MIN_FACTOR     = 0.5     # brightness floor for rain drip (50%)
 
@@ -196,19 +193,6 @@ def temp_to_color(temp_f):
 # RGB tuple. NEVER call pixels.brightness here — scale tuple values instead to
 # avoid double SPI writes (auto_write=False pattern from adafruit_dotstar source).
 
-def breathe_tick(base_rgb, t):
-    """
-    Slow sinusoidal breathe for clear/sunny conditions (LIGHT-05, D-03).
-    4-second cycle: brightness 100% → 60% → 100%.
-    """
-    cycle  = (t % BREATHE_PERIOD) / BREATHE_PERIOD
-    factor = (BREATHE_MIN_FACTOR
-              + (1.0 - BREATHE_MIN_FACTOR)
-              * (0.5 + 0.5 * math.cos(2 * math.pi * cycle)))
-    r, g, b = base_rgb
-    return (int(r * factor), int(g * factor), int(b * factor))
-
-
 def rain_tick(base_rgb, t):
     """
     Rhythmic brightness drip for rain/drizzle conditions (LIGHT-03, D-05).
@@ -272,11 +256,11 @@ def wind_tick(base_rgb, t):
 
 def animation_tick(base_rgb, t, has_rain, has_storm, has_clear, has_wind, is_extreme_heat):
     """
-    Apply all active animations in D-09 priority order:
-      Wind overlay > Lightning burst > Rain pulse > Breathe > Base color
+    Apply all active animations in priority order:
+      Wind overlay > Lightning burst > Rain pulse > Base color (solid)
 
     Rules:
-    - Breathe is suppressed when rain or storm is active (D-07 / research note: avoids double-dimming).
+    - Clear/sunny shows solid base color with no animation.
     - Wind always overlays regardless of other conditions (D-08).
     - Extreme heat (100°F+) flashes between COLOR_RED_FLASH and off every 0.5s; wind still overlays (D-08).
     """
@@ -289,10 +273,6 @@ def animation_tick(base_rgb, t, has_rain, has_storm, has_clear, has_wind, is_ext
         if has_wind:
             rgb = wind_tick(rgb, t)
         return rgb
-
-    # Layer 4 (lowest): Breathe — clear/sunny only, suppressed by rain/storm
-    if has_clear and not has_rain and not has_storm:
-        rgb = breathe_tick(rgb, t)
 
     # Layer 3: Rain drip pulse
     if has_rain:
