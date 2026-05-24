@@ -4,9 +4,7 @@ Pi Weather Lights — drives a 144-LED DotStar strip with live weather condition
 Hardware: Raspberry Pi + DotStar 144-LED strip via SPI (board.SCLK / board.MOSI)
 """
 import argparse
-import math
 import os
-import random
 import sys
 import time
 from datetime import datetime
@@ -27,33 +25,34 @@ NUM_LEDS = 144
 
 # ── Temperature → Base Color (RGB) ────────────────────────────────────────────
 # All 144 LEDs fill with one color at a time (LIGHT-02)
-COLOR_DEEP_BLUE = (0,   0,   255)   # < 60°F
-COLOR_CYAN      = (0,   200, 200)   # 60–70°F
-COLOR_GREEN     = (0,   200, 50)    # 70–80°F
-COLOR_ORANGE    = (255, 140, 0)     # 80–90°F
-COLOR_RED       = (220, 20,  20)    # 90–99°F
-COLOR_RED_FLASH = (255, 0,   0)     # 100°F+ (flashing mode — handled in animation_tick)
+COLOR_CYAN             = (0,   200, 200)   # < 69°F
+COLOR_GREEN            = (0,   200, 50)    # 69–80°F
+COLOR_ORANGE           = (255, 140, 0)     # 80–90°F
+COLOR_RED              = (220, 20,  20)    # 90–99°F
+COLOR_RED_FLASH        = (255, 0,   0)     # 100°F+ (flashing mode — handled in animation_tick)
+COLOR_RAIN_BLUE        = (0,   0,   100)   # rain condition override (precip > 10%) — deep navy blue
+COLOR_LIGHTNING_YELLOW = (255, 200, 0)     # lightning flash
 
 # ── Animation Timing ──────────────────────────────────────────────────────────
-FETCH_INTERVAL      = 3600    # seconds between weather fetches (60 min)
-FRAME_INTERVAL      = 0.05    # seconds per animation frame (20 fps)
+FETCH_INTERVAL          = 3600    # seconds between weather fetches (60 min)
+FRAME_INTERVAL          = 0.05    # seconds per animation frame (20 fps)
 
-RAIN_PERIOD         = 1.0     # seconds for one rain pulse cycle (D-05)
-RAIN_MIN_FACTOR     = 0.5     # brightness floor for rain drip (50%)
+RAIN_PRECIP_THRESHOLD   = 10.0    # % precip probability that triggers rain color
 
-LIGHTNING_DUR       = 0.1     # seconds for one lightning flash (D-04)
-LIGHTNING_MIN_GAP   = 30.0    # min seconds between flashes (gives ~2/min max)
-LIGHTNING_MAX_GAP   = 60.0    # max seconds between flashes (gives ~1/min min)
+LIGHTNING_DUR           = 1.0     # seconds for one yellow lightning flash
+LIGHTNING_INTERVAL      = 30.0    # seconds between flashes (twice per minute)
 
-WIND_PULSE_PERIOD   = 1.5     # seconds for one wind pulse cycle (D-06)
-WIND_LERP           = 0.7     # fraction toward white per wind pulse peak (70%)
+WIND_THRESHOLD          = 10.0    # mph threshold for wind brightness animation
+WIND_PERIOD             = 60.0    # seconds for one full brightness cycle (30s up + 30s down)
+WIND_MIN_BRIGHT         = 0.70    # brightness floor (70%)
+WIND_MAX_BRIGHT         = 1.00    # brightness ceiling (100%)
 
 # ── Season Fallback Colors (D-11) ─────────────────────────────────────────────
 # Used when API fails on first startup — no prior state to hold
 def get_season_color():
     month = datetime.now().month
     if month in (12, 1, 2):
-        return COLOR_DEEP_BLUE   # winter — cold
+        return COLOR_CYAN        # winter — cold
     elif month in (3, 4, 5):
         return COLOR_GREEN       # spring — mild
     elif month in (6, 7, 8):
@@ -90,8 +89,9 @@ def fetch_weather():
         temps = [cur["temp"]]             + [h["temp"]           for h in hrs]
         codes = [cur["weather"]["code"]]  + [h["weather"]["code"] for h in hrs]
         winds = [cur["wind_spd"]]         + [h["wind_spd"]        for h in hrs]
+        pops  = [cur.get("pop", 0)]       + [h.get("pop", 0)      for h in hrs]
 
-        return {"temps": temps, "codes": codes, "winds": winds}
+        return {"temps": temps, "codes": codes, "winds": winds, "pops": pops}
 
     except Exception as exc:
         print(f"[{datetime.now():%H:%M:%S}] Weatherbit fetch failed: {exc}",
@@ -109,7 +109,7 @@ def fetch_open_meteo():
     params = {
         "latitude":          LAT,
         "longitude":         LON,
-        "hourly":            "temperature_2m,weather_code,windspeed_10m",
+        "hourly":            "temperature_2m,weather_code,windspeed_10m,precipitation_probability",
         "forecast_hours":    5,
         "wind_speed_unit":   "mph",
         "temperature_unit":  "fahrenheit",
@@ -125,6 +125,7 @@ def fetch_open_meteo():
             "temps": data["temperature_2m"][:5],
             "codes": data["weather_code"][:5],
             "winds": data["windspeed_10m"][:5],
+            "pops":  data.get("precipitation_probability", [0] * 5)[:5],
         }
 
     except Exception as exc:
@@ -139,34 +140,26 @@ def fetch_open_meteo():
 def _is_storm_code(code):
     return (200 <= code <= 299) or (95 <= code <= 99)
 
-def _is_rain_code(code):
-    return (300 <= code <= 599) or (51 <= code <= 65) or (80 <= code <= 82)
-
-def _is_clear_code(code):
-    return code == 800 or code <= 1
-
 
 def average_conditions(raw):
     """
-    Given raw weather dict (temps, codes, winds), return:
+    Given raw weather dict (temps, codes, winds, pops), return:
       avg_temp_f (float): mean temperature across all data points
-      has_rain   (bool):  any data point has rain/drizzle code
+      has_rain   (bool):  any data point has precipitation probability > 10%
       has_storm  (bool):  any data point has thunderstorm code
-      has_clear  (bool):  ALL points are clear AND no precip detected
-      has_wind   (bool):  any data point has wind_spd > 15 mph
+      has_wind   (bool):  any data point has wind_spd > 10 mph
     """
     temps = raw["temps"]
     codes = raw["codes"]
     winds = raw["winds"]
+    pops  = raw.get("pops", [0] * len(temps))
 
     avg_temp_f = sum(temps) / len(temps)
-    has_rain   = any(_is_rain_code(c)  for c in codes)
+    has_rain   = any(p > RAIN_PRECIP_THRESHOLD for p in pops)
     has_storm  = any(_is_storm_code(c) for c in codes)
-    has_wind   = any(w > 15.0          for w in winds)
-    has_clear  = (all(_is_clear_code(c) for c in codes)
-                  and not has_rain and not has_storm)
+    has_wind   = any(w > WIND_THRESHOLD for w in winds)
 
-    return avg_temp_f, has_rain, has_storm, has_clear, has_wind
+    return avg_temp_f, has_rain, has_storm, has_wind
 
 
 def temp_to_color(temp_f):
@@ -174,12 +167,10 @@ def temp_to_color(temp_f):
     Map average forecast temperature in °F to a base RGB color tuple (LIGHT-02).
     The 100°F+ zone returns COLOR_RED_FLASH — animation_tick handles the actual flashing.
     """
-    if temp_f < 60:
-        return COLOR_DEEP_BLUE   # < 60°F
-    elif temp_f < 70:
-        return COLOR_CYAN        # 60–70°F
+    if temp_f < 69:
+        return COLOR_CYAN        # < 69°F
     elif temp_f < 80:
-        return COLOR_GREEN       # 70–80°F
+        return COLOR_GREEN       # 69–80°F
     elif temp_f < 90:
         return COLOR_ORANGE      # 80–90°F
     elif temp_f < 100:
@@ -193,79 +184,44 @@ def temp_to_color(temp_f):
 # RGB tuple. NEVER call pixels.brightness here — scale tuple values instead to
 # avoid double SPI writes (auto_write=False pattern from adafruit_dotstar source).
 
-def rain_tick(base_rgb, t):
-    """
-    Rhythmic brightness drip for rain/drizzle conditions (LIGHT-03, D-05).
-    1-second triangle-wave cycle: brightness 100% → 50% → 100%.
-    """
-    cycle = (t % RAIN_PERIOD) / RAIN_PERIOD
-    if cycle < 0.5:
-        factor = 1.0 - (1.0 - RAIN_MIN_FACTOR) * (cycle / 0.5)    # drop 1.0 → 0.5
-    else:
-        factor = RAIN_MIN_FACTOR + (1.0 - RAIN_MIN_FACTOR) * ((cycle - 0.5) / 0.5)  # rise 0.5 → 1.0
-    r, g, b = base_rgb
-    return (int(r * factor), int(g * factor), int(b * factor))
-
-
-# Module-level lightning state (dict avoids the `global` keyword)
-_lightning = {
-    "next_at":   0.0,   # monotonic time of next scheduled flash
-    "flash_end": 0.0,   # monotonic time when current flash ends
-}
-
-
 def lightning_tick(base_rgb, t):
     """
-    Occasional lightning burst for thunderstorm conditions (LIGHT-04, D-04).
-    Fires 1-2 times per minute at random intervals.
-    During flash: returns (255, 255, 255). Between flashes: returns base_rgb.
+    Yellow lightning flash for storm conditions (LIGHT-04).
+    On for LIGHTNING_DUR seconds every LIGHTNING_INTERVAL seconds — twice per minute.
     """
-    if _lightning["next_at"] == 0.0:
-        # First call — schedule the initial flash
-        _lightning["next_at"] = t + random.uniform(LIGHTNING_MIN_GAP, LIGHTNING_MAX_GAP)
-
-    if t >= _lightning["next_at"]:
-        if t < _lightning["flash_end"] + LIGHTNING_DUR:
-            return (255, 255, 255)   # actively flashing
-        # Start a new flash and schedule the next one
-        _lightning["flash_end"] = t
-        _lightning["next_at"]   = (t + LIGHTNING_DUR
-                                   + random.uniform(LIGHTNING_MIN_GAP, LIGHTNING_MAX_GAP))
-        return (255, 255, 255)
-
+    if (t % LIGHTNING_INTERVAL) < LIGHTNING_DUR:
+        return COLOR_LIGHTNING_YELLOW
     return base_rgb
 
 
 def wind_tick(base_rgb, t):
     """
-    Dominant wind white pulse overlay (LIGHT-06, D-06).
-    Sinusoidal pulse toward white on WIND_PULSE_PERIOD cycle.
-    Peak lerp factor is WIND_LERP (0.70) — strip unmistakably shifts toward white.
+    Slow brightness breathe for wind conditions (LIGHT-06).
+    70% → 100% brightness over 30s, then 100% → 70% over 30s (60s full cycle).
+    Scales the RGB tuple — never touches pixels.brightness.
     """
-    cycle = (t % WIND_PULSE_PERIOD) / WIND_PULSE_PERIOD
-    pulse = 0.5 + 0.5 * math.sin(2 * math.pi * cycle - math.pi / 2)
-    lerp  = WIND_LERP * pulse   # 0.0 at trough, 0.70 at peak
-
+    cycle = t % WIND_PERIOD
+    half  = WIND_PERIOD / 2
+    if cycle < half:
+        factor = WIND_MIN_BRIGHT + (WIND_MAX_BRIGHT - WIND_MIN_BRIGHT) * (cycle / half)
+    else:
+        factor = WIND_MAX_BRIGHT - (WIND_MAX_BRIGHT - WIND_MIN_BRIGHT) * ((cycle - half) / half)
     r, g, b = base_rgb
-    return (
-        r + int((255 - r) * lerp),
-        g + int((255 - g) * lerp),
-        b + int((255 - b) * lerp),
-    )
+    return (int(r * factor), int(g * factor), int(b * factor))
 
 
-def animation_tick(base_rgb, t, has_rain, has_storm, has_clear, has_wind, is_extreme_heat):
+def animation_tick(base_rgb, t, has_rain, has_storm, has_wind, is_extreme_heat):
     """
-    Apply all active animations in priority order:
-      Wind overlay > Lightning burst > Rain pulse > Base color (solid)
+    Apply active animations in priority order:
+      Wind brightness breathe > Lightning yellow flash > Rain blue > Base temp color
 
     Rules:
-    - Clear/sunny shows solid base color with no animation.
-    - Wind always overlays regardless of other conditions (D-08).
-    - Extreme heat (100°F+) flashes between COLOR_RED_FLASH and off every 0.5s; wind still overlays (D-08).
+    - Rain (precip > 10%) replaces base color with solid blue.
+    - Storm fires yellow flashes on top of whatever color is showing.
+    - Wind breathes brightness 70-100% on top of everything.
+    - No active condition: solid temperature color, no animation.
+    - Extreme heat (100°F+) flashes red/off; wind still applies.
     """
-    rgb = base_rgb
-
     # Extreme heat: flash between red and off
     if is_extreme_heat:
         flash_on = (int(t / 0.5) % 2) == 0
@@ -274,15 +230,14 @@ def animation_tick(base_rgb, t, has_rain, has_storm, has_clear, has_wind, is_ext
             rgb = wind_tick(rgb, t)
         return rgb
 
-    # Layer 3: Rain drip pulse
-    if has_rain:
-        rgb = rain_tick(rgb, t)
+    # Rain overrides base color with solid blue
+    rgb = COLOR_RAIN_BLUE if has_rain else base_rgb
 
-    # Layer 2: Lightning burst (stacks on rain when both active — D-07)
+    # Lightning: yellow flash on top of current color
     if has_storm:
         rgb = lightning_tick(rgb, t)
 
-    # Layer 1 (highest priority): Wind white pulse (D-08: always fires if wind > 15 mph)
+    # Wind: slow brightness breathe on top of everything
     if has_wind:
         rgb = wind_tick(rgb, t)
 
@@ -325,7 +280,6 @@ def main():
     base_color      = get_season_color()  # D-11: season default until first successful fetch
     has_rain        = False
     has_storm       = False
-    has_clear       = False
     has_wind        = False
 
     print(f"[{datetime.now():%H:%M:%S}] Pi Weather Lights starting. "
@@ -342,27 +296,23 @@ def main():
                     raw = fetch_open_meteo()
 
                 if raw is not None and raw.get("temps"):
-                    avg_temp, has_rain, has_storm, has_clear, has_wind = \
-                        average_conditions(raw)
+                    avg_temp, has_rain, has_storm, has_wind = average_conditions(raw)
                     base_color      = temp_to_color(avg_temp)
                     last_fetch_time = now
-                    _lightning["next_at"]   = 0.0   # reschedule on new conditions
-                    _lightning["flash_end"] = 0.0
                     print(f"[{datetime.now():%H:%M:%S}] "
                           f"Temp: {avg_temp:.1f}°F  "
-                          f"rain={has_rain} storm={has_storm} "
-                          f"clear={has_clear} wind={has_wind}")
+                          f"rain={has_rain} storm={has_storm} wind={has_wind}")
                 else:
                     # D-10: hold last known color/flags; D-12: log to stderr
                     print(f"[{datetime.now():%H:%M:%S}] Fetch failed — "
                           f"holding last state.", file=sys.stderr)
                     last_fetch_time = now   # avoid hammering API on repeated failure
 
-            # ── Animation frame (D-02: strip never static) ───────────────────
+            # ── Animation frame ──────────────────────────────────────────────
             is_extreme_heat = (base_color == COLOR_RED_FLASH)
             animated_rgb = animation_tick(
                 base_color, now,
-                has_rain, has_storm, has_clear, has_wind,
+                has_rain, has_storm, has_wind,
                 is_extreme_heat,
             )
             fill_color(pixels, animated_rgb)
