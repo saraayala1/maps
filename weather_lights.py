@@ -16,8 +16,8 @@ import adafruit_dotstar as dotstar
 import requests
 
 # ── Location (set before first run) ──────────────────────────────────────────
-LAT = 0.0   # TODO: replace with your latitude  (e.g. 25.7617 for Miami)
-LON = 0.0   # TODO: replace with your longitude (e.g. -80.1918 for Miami)
+LAT = 28.2442   # New Port Richey, FL 34654
+LON = -82.7190  # New Port Richey, FL 34654
 
 # ── API Key ───────────────────────────────────────────────────────────────────
 WEATHERBIT_API_KEY = os.environ.get("WEATHERBIT_API_KEY", "")
@@ -112,7 +112,7 @@ def fetch_open_meteo():
     params = {
         "latitude":          LAT,
         "longitude":         LON,
-        "hourly":            "temperature_2m,weathercode,windspeed_10m",
+        "hourly":            "temperature_2m,weather_code,windspeed_10m",
         "forecast_hours":    5,
         "wind_speed_unit":   "mph",
         "temperature_unit":  "fahrenheit",
@@ -126,7 +126,7 @@ def fetch_open_meteo():
 
         return {
             "temps": data["temperature_2m"][:5],
-            "codes": data["weathercode"][:5],
+            "codes": data["weather_code"][:5],
             "winds": data["windspeed_10m"][:5],
         }
 
@@ -361,7 +361,7 @@ def main():
                 if raw is None:
                     raw = fetch_open_meteo()
 
-                if raw is not None:
+                if raw is not None and raw.get("temps"):
                     avg_temp, has_rain, has_storm, has_clear, has_wind = \
                         average_conditions(raw)
                     base_color      = temp_to_color(avg_temp)
