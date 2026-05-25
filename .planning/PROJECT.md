@@ -13,20 +13,20 @@ The light strip turns on automatically and shows the right weather color and con
 ### Validated
 
 - [x] Script auto-starts on boot via cron @reboot — LED strip lights up within 2 min of power cycle (Phase 2, 2026-05-24)
+- [x] Code hosted in a GitHub repo with documentation and test scripts — all scripts + README + pi-setup.md at github.com/saraayala1/maps (Phase 4, 2026-05-25)
 
 ### Active
 
 - [ ] Light strip displays temperature zone as a base color (avg of current + next 4h via Weatherbit / Open-Meteo fallback)
-- [ ] Rain/drizzle condition (API codes) triggers a drip/pulse animation over the base color
-- [ ] Storm/thunder condition triggers a flash/lightning animation over the base color
-- [ ] Clear/sunny condition shows a slow breathe effect
-- [ ] Wind > 15 mph pulses white ON TOP of the current temp color and condition animation
+- [ ] Rain/drizzle → strip turns blue and pulses (temperature color suppressed)
+- [ ] Storm/thunder → blue pulsing + yellow flashes (temperature color suppressed)
+- [ ] No active condition → temperature color only, solid
+- [ ] Wind > 15 mph → white pulse on top of whatever is showing (including blue rain)
 - [ ] All weather conditions are evaluated as boolean for the next 4 hours (if occurring, show it)
 - [ ] Script auto-starts on boot via cron job (no manual intervention needed)
 - [ ] Script writes current temperature + conditions to `/home/javi/weather_status` each loop (cat-able status file)
 - [ ] Script auto-turns on every day at 7:00 AM via cron job
 - [ ] Script auto-shuts off on schedule: Mon/Tue/Thu/Fri at 9am, Wed at 4pm, Sat/Sun at 6pm
-- [ ] Code hosted in a GitHub repo with documentation and test scripts
 - [ ] Voice HAT integration for "Map Off" / "Map On" voice commands (Phase 5 — pinned)
 
 ### Out of Scope
@@ -60,12 +60,12 @@ The light strip turns on automatically and shows the right weather color and con
 
 Uses Weatherbit condition codes (same as vite-react site), with Open-Meteo WMO codes as fallback.
 
-| Condition | Weatherbit codes | WMO fallback | Animation |
-|-----------|-----------------|--------------|-----------|
-| Clear / Sunny | 800 | 0–1 | Slow breathe (base color) |
-| Rain / Drizzle | 300–399, 500–599 | 51–65, 80–82 | Drip/pulse animation |
-| Storm / Thunder | 200–299 | 95–99 | Flash/lightning effect |
-| High Wind | wind_spd > 15 mph | wind_speed_10m > 15 mph | White pulse on top of base color |
+| Condition | Weatherbit codes | WMO fallback | Display |
+|-----------|-----------------|--------------|---------|
+| No condition | — | — | Temperature color only (solid) |
+| Rain / Drizzle | 300–399, 500–599 | 51–65, 80–82 | **Blue pulsing** — replaces temperature color |
+| Storm / Thunder | 200–299 | 95–99 | **Blue pulsing + yellow flashes** — replaces temperature color |
+| High Wind | wind_spd > 15 mph | wind_speed_10m > 15 mph | White pulse on top of whatever is showing |
 
 ## Schedule
 
@@ -122,4 +122,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-24 after Phase 2 completion*
+*Last updated: 2026-05-25 after Phase 4 completion*
