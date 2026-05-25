@@ -77,9 +77,13 @@ Wave 1 *(both plans are independent — no file overlap)*
 **Success Criteria** (what must be TRUE):
   1. The repo at github.com/saraayala1/maps contains all production scripts and is publicly accessible
   2. The README provides enough detail for a fresh Pi setup: Weatherbit API key configuration, SPI wiring, dependency installation, and cron entry setup
-  3. Test scripts exercise every temperature zone color and every weather condition animation, producing observable strip output or printed results
-  4. The manual simulation script accepts a temperature and boolean condition flags and drives the strip identically to the live script — no API call made
-**Plans**: TBD
+  3. Test scripts exercise every temperature zone color and every weather condition animation, producing observable strip output or printed results *(deferred — see 04-DEFERRED.md)*
+  4. The manual simulation script accepts a temperature and boolean condition flags and drives the strip identically to the live script — no API call made *(deferred — see 04-DEFERRED.md)*
+**Plans**: 2 plans
+
+Wave 1 *(both plans are independent — no file overlap)*
+- [ ] Plan 04-01: Create .gitignore + push all production files to github.com/saraayala1/maps (REPO-01, REPO-02)
+- [ ] Plan 04-02: Formal deferred backlog record for REPO-03 and REPO-04 (04-DEFERRED.md)
 
 ### Phase 5: Voice Control (v2 — pinned)
 **Goal**: Voice commands "Map On" and "Map Off" toggle the LED strip using a ReSpeaker or compatible Voice HAT
@@ -98,5 +102,5 @@ Wave 1 *(both plans are independent — no file overlap)*
 | 1. Weather Display | 0/4 | Ready to execute | - |
 | 2. Boot Auto-Start | 1/1 | Complete | 2026-05-24 |
 | 3. Schedule On/Off | 0/2 | Not started | - |
-| 4. GitHub Repo | 0/? | Not started | - |
+| 4. GitHub Repo | 0/2 | Ready to execute | - |
 | 5. Voice Control (v2) | 0/? | Deferred | - |
