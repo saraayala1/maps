@@ -82,8 +82,8 @@ Wave 1 *(both plans are independent — no file overlap)*
 **Plans**: 2 plans
 
 Wave 1 *(both plans are independent — no file overlap)*
-- [ ] Plan 04-01: Create .gitignore + push all production files to github.com/saraayala1/maps (REPO-01, REPO-02)
-- [ ] Plan 04-02: Formal deferred backlog record for REPO-03 and REPO-04 (04-DEFERRED.md)
+- [x] Plan 04-01: Create .gitignore + push all production files to github.com/saraayala1/maps (REPO-01, REPO-02)
+- [x] Plan 04-02: Formal deferred backlog record for REPO-03 and REPO-04 (04-DEFERRED.md)
 
 ### Phase 5: Voice Control (v2 — pinned)
 **Goal**: Voice commands "Map On" and "Map Off" toggle the LED strip using a ReSpeaker or compatible Voice HAT
