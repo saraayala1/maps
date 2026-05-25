@@ -9,7 +9,7 @@ Four phases deliver a fully autonomous LED weather display. Phase 1 builds the c
 - [ ] **Phase 1: Weather Display** - Script fetches weather and drives the LED strip with the correct color and animation
 - [x] **Phase 2: Boot Auto-Start** - Script launches automatically on every Pi boot with no manual intervention *(2026-05-24)*
 - [ ] **Phase 3: Schedule On/Off** - Strip turns on at 7 AM daily and turns off per the weekly schedule
-- [ ] **Phase 4: GitHub Repo** - All code, docs, and test scripts published to github.com/saraayala1/maps
+- [x] **Phase 4: GitHub Repo** - All code, docs, and test scripts published to github.com/saraayala1/maps (completed 2026-05-25)
 - [ ] **Phase 5: Voice Control (v2 — pinned)** - "Map On" / "Map Off" voice commands via ReSpeaker HAT
 
 ## Phase Details
@@ -102,5 +102,5 @@ Wave 1 *(both plans are independent — no file overlap)*
 | 1. Weather Display | 0/4 | Ready to execute | - |
 | 2. Boot Auto-Start | 1/1 | Complete | 2026-05-24 |
 | 3. Schedule On/Off | 0/2 | Not started | - |
-| 4. GitHub Repo | 0/2 | Ready to execute | - |
+| 4. GitHub Repo | 2/2 | Complete    | 2026-05-25 |
 | 5. Voice Control (v2) | 0/? | Deferred | - |

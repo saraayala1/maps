@@ -12,10 +12,10 @@
   - 80–90°F → orange
   - 90–99°F → red
   - 100°F+ → flashing red (extreme)
-- [ ] **LIGHT-03**: Rain or drizzle detected in next 4h (Weatherbit 300–599 / WMO 51–65, 80–82) → drip/pulse brightness animation overlaid on base color
-- [ ] **LIGHT-04**: Thunderstorm detected in next 4h (Weatherbit 200–299 / WMO 95–99) → flash/lightning animation overlaid on base color
-- [ ] **LIGHT-05**: Clear/sunny sky (Weatherbit 800 / WMO 0–1) → slow breathe (brightness cycle) on base color
-- [ ] **LIGHT-06**: Wind speed > 15 mph in any fetched data point → white pulse overlaid on top of current color/animation
+- [ ] **LIGHT-03**: Rain or drizzle detected in next 4h (Weatherbit 300–599 / WMO 51–65, 80–82) → strip turns **blue** and pulses; temperature color is suppressed
+- [ ] **LIGHT-04**: Thunderstorm detected in next 4h (Weatherbit 200–299 / WMO 95–99) → strip pulses **blue** (rain) with **yellow flashes** (lightning); temperature color is suppressed
+- [ ] **LIGHT-05**: No active weather condition → strip shows temperature color only (solid, no animation); clear/sunny is not a special case
+- [ ] **LIGHT-06**: Wind speed > 15 mph in any fetched data point → white pulse overlaid on top of current color/animation (including on top of blue rain pulse)
 
 ### Boot & Schedule
 
@@ -29,10 +29,10 @@
 
 ### Repository
 
-- [ ] **REPO-01**: All code and scripts pushed to `https://github.com/saraayala1/maps`
-- [ ] **REPO-02**: README with setup instructions: Weatherbit API key, hardware wiring (SPI pins), installing dependencies, cron entries
-- [ ] **REPO-03**: Test scripts covering: each temperature zone color, each weather condition animation, schedule on/off behavior
-- [ ] **REPO-04**: Manual simulation test script — accepts a temperature (°F) and boolean flags for each condition (`rain`, `storm`, `clear`, `wind`) and drives the strip exactly as the live script would, without fetching any API data
+- [x] **REPO-01**: All code and scripts pushed to `https://github.com/saraayala1/maps`
+- [x] **REPO-02**: README with setup instructions: Weatherbit API key, hardware wiring (SPI pins), installing dependencies, cron entries
+- [x] **REPO-03**: Test scripts covering: each temperature zone color, each weather condition animation, schedule on/off behavior
+- [x] **REPO-04**: Manual simulation test script — accepts a temperature (°F) and boolean flags for each condition (`rain`, `storm`, `clear`, `wind`) and drives the strip exactly as the live script would, without fetching any API data
 
 ## v2 (Deferred)
 
@@ -60,8 +60,8 @@
 | STATUS-01 | Phase 4: GitHub Repo (or Phase 1 gap) | Pending |
 | SCHED-02 | Phase 3: Schedule On/Off | Pending |
 | SCHED-03 | Phase 3: Schedule On/Off | Pending |
-| REPO-01 | Phase 4: GitHub Repo | Pending |
-| REPO-02 | Phase 4: GitHub Repo | Pending |
-| REPO-03 | Phase 4: GitHub Repo | Pending |
-| REPO-04 | Phase 4: GitHub Repo | Pending |
+| REPO-01 | Phase 4: GitHub Repo | Complete |
+| REPO-02 | Phase 4: GitHub Repo | Complete |
+| REPO-03 | Phase 4: GitHub Repo | Complete |
+| REPO-04 | Phase 4: GitHub Repo | Complete |
 | Voice HAT (v2) | Phase 5: Voice Control (deferred) | Deferred |
