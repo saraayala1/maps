@@ -63,7 +63,11 @@ Wave 1 *(no prior dependency within phase)*
   1. At 7:00 AM daily the strip turns on and begins displaying live weather (observable by checking cron log or waiting for the scheduled time)
   2. On Mon/Tue/Thu/Fri the strip shuts off at 9:00 AM; on Wednesday at 4:00 PM; on Saturday and Sunday at 6:00 PM
   3. `crontab -l` shows all seven on/off cron entries with the correct day masks and times
-**Plans**: TBD
+**Plans**: 2 plans
+
+Wave 1 *(both plans are independent — no file overlap)*
+- Plan 03-01: SIGTERM handler in weather_lights.py + stop_weather.sh
+- Plan 03-02: pi-setup.md — Step 9 (copy stop_weather.sh) + Step 10 (all 4 cron entries)
 
 ### Phase 4: GitHub Repo
 **Goal**: Everything needed to reproduce the project lives in github.com/saraayala1/maps — code, setup docs, and runnable test scripts
@@ -93,6 +97,6 @@ Wave 1 *(no prior dependency within phase)*
 |-------|----------------|--------|-----------|
 | 1. Weather Display | 0/4 | Ready to execute | - |
 | 2. Boot Auto-Start | 1/1 | Complete | 2026-05-24 |
-| 3. Schedule On/Off | 0/? | Not started | - |
+| 3. Schedule On/Off | 0/2 | Not started | - |
 | 4. GitHub Repo | 0/? | Not started | - |
 | 5. Voice Control (v2) | 0/? | Deferred | - |

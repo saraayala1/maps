@@ -95,6 +95,69 @@ Save and exit. Verify it saved:
 ssh javi@map.local "crontab -l"
 ```
 
+### 9. Copy stop_weather.sh to the Pi
+
+```bash
+scp stop_weather.sh javi@map.local:/home/javi/stop_weather.sh
+ssh javi@map.local "chmod +x /home/javi/stop_weather.sh"
+```
+
+Verify it's executable:
+```bash
+ssh javi@map.local "ls -la ~/stop_weather.sh"
+```
+
+### 10. Wire Up the On/Off Schedule (cron)
+
+Open javi's crontab on the Pi:
+```bash
+ssh javi@map.local "crontab -e"
+```
+
+Add all four entries below the existing `@reboot` line:
+
+```
+# 7 AM daily restart (kill any running instance, then start fresh)
+0 7 * * * pkill -f weather_lights.py 2>/dev/null; sleep 2; /home/javi/start_weather.sh >> /home/javi/weather_lights.log 2>&1
+
+# Off schedule — Mon/Tue/Thu/Fri
+0 9 * * 1,2,4,5 /home/javi/stop_weather.sh >> /home/javi/weather_lights.log 2>&1
+
+# Off schedule — Wednesday
+0 16 * * 3 /home/javi/stop_weather.sh >> /home/javi/weather_lights.log 2>&1
+
+# Off schedule — weekend
+0 18 * * 6,0 /home/javi/stop_weather.sh >> /home/javi/weather_lights.log 2>&1
+```
+
+Save and exit. Verify all five entries are present (1 @reboot + 4 schedule):
+```bash
+ssh javi@map.local "crontab -l"
+```
+
+Expected output includes:
+- `@reboot /home/javi/start_weather.sh >> /home/javi/weather_lights.log 2>&1`
+- `0 7 * * * pkill -f weather_lights.py 2>/dev/null; sleep 2; /home/javi/start_weather.sh >> /home/javi/weather_lights.log 2>&1`
+- `0 9 * * 1,2,4,5 /home/javi/stop_weather.sh >> /home/javi/weather_lights.log 2>&1`
+- `0 16 * * 3 /home/javi/stop_weather.sh >> /home/javi/weather_lights.log 2>&1`
+- `0 18 * * 6,0 /home/javi/stop_weather.sh >> /home/javi/weather_lights.log 2>&1`
+
+#### Schedule Reference
+
+| Day(s) | Strip OFF at |
+|--------|-------------|
+| Mon, Tue, Thu, Fri | 9:00 AM |
+| Wednesday | 4:00 PM |
+| Saturday, Sunday | 6:00 PM |
+
+The 7 AM entry always restarts — if the strip was already on from `@reboot`, it kills and
+relaunches to ensure a clean process at the start of each day.
+
+After adding cron entries, confirm by tailing the log around a scheduled time:
+```bash
+ssh javi@map.local "tail -f ~/weather_lights.log"
+```
+
 ## Running Manually
 
 ```bash

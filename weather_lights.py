@@ -5,6 +5,7 @@ Hardware: Raspberry Pi + DotStar 144-LED strip via SPI (board.SCLK / board.MOSI)
 """
 import argparse
 import os
+import signal
 import sys
 import time
 from datetime import datetime
@@ -270,10 +271,19 @@ def test_hardware(pixels):
     print("Hardware test complete.")
 
 
+# ── Shutdown Handler ──────────────────────────────────────────────────────────
+def _shutdown(pixels):
+    """SIGTERM handler: clear strip to black and exit cleanly (D-05, D-10)."""
+    pixels.fill((0, 0, 0))
+    pixels.show()
+    sys.exit(0)
+
+
 # ── Main Loop ─────────────────────────────────────────────────────────────────
 
 def main():
     pixels = init_strip()
+    signal.signal(signal.SIGTERM, lambda sig, frame: _shutdown(pixels))  # D-10
 
     # State
     last_fetch_time = -FETCH_INTERVAL   # negative triggers immediate fetch on first pass
