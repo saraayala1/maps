@@ -1,0 +1,15 @@
+# API key and secrets — never commit
+.env
+.env.*
+
+# Pi runtime logs
+*.log
+weather_lights.log
+
+# macOS junk
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
