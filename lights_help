@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+echo ""
+echo "  Pi Weather Lights — Quick Reference"
+echo ""
+echo "  restart_lights    Stop and restart the lights."
+echo "  explain_yourself  Show the latest weather reading."
+echo ""
+echo "  Tip: Press Tab to auto-complete a command, then Enter to run it."
+echo "  Tip: If nothing happens after a command, press Enter once more."
+echo ""

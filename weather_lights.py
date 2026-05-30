@@ -4,9 +4,11 @@ Pi Weather Lights — drives a 144-LED DotStar strip with live weather condition
 Hardware: Raspberry Pi + DotStar 144-LED strip via SPI (board.SCLK / board.MOSI)
 """
 import argparse
+import colorsys
 import os
 import signal
 import sys
+import threading
 import time
 from datetime import datetime
 
@@ -48,18 +50,46 @@ WIND_PERIOD             = 60.0    # seconds for one full brightness cycle (30s u
 WIND_MIN_BRIGHT         = 0.70    # brightness floor (70%)
 WIND_MAX_BRIGHT         = 1.00    # brightness ceiling (100%)
 
-# ── Season Fallback Colors (D-11) ─────────────────────────────────────────────
-# Used when API fails on first startup — no prior state to hold
-def get_season_color():
-    month = datetime.now().month
-    if month in (12, 1, 2):
-        return COLOR_CYAN        # winter — cold
-    elif month in (3, 4, 5):
-        return COLOR_GREEN       # spring — mild
-    elif month in (6, 7, 8):
-        return COLOR_ORANGE      # summer — warm
-    else:
-        return COLOR_CYAN        # fall — cool
+# ── Shared State (fetch thread → main loop) ───────────────────────────────────
+
+class WeatherState:
+    """Written by the fetch worker, read by the main loop. Never touches SPI."""
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.ready = False
+        self.base_color = (0, 0, 0)
+        self.has_rain = self.has_storm = self.has_wind = False
+
+    def update(self, base_color, has_rain, has_storm, has_wind):
+        with self.lock:
+            self.base_color, self.has_rain, self.has_storm, self.has_wind = \
+                base_color, has_rain, has_storm, has_wind
+            self.ready = True
+
+    def snapshot(self):
+        with self.lock:
+            return (self.ready, self.base_color,
+                    self.has_rain, self.has_storm, self.has_wind)
+
+
+def fetch_worker(state, stop_event):
+    """Fetch every FETCH_INTERVAL; update shared state. No LED access."""
+    while not stop_event.is_set():
+        raw = fetch_weather() or fetch_open_meteo()
+        if raw and raw.get("temps"):
+            avg_temp, has_rain, has_storm, has_wind = average_conditions(raw)
+            state.update(temp_to_color(avg_temp), has_rain, has_storm, has_wind)
+            fc = " ".join(f"{t:.0f}" for t in raw["temps"])
+            print(f"[{datetime.now():%H:%M:%S}] Temp: {avg_temp:.1f}°F  "
+                  f"rain={has_rain} storm={has_storm} wind={has_wind}  "
+                  f"4h=[{fc}]", flush=True)
+        else:
+            print(f"[{datetime.now():%H:%M:%S}] Fetch failed — holding last state.",
+                  file=sys.stderr, flush=True)
+        for _ in range(int(FETCH_INTERVAL / 0.5)):
+            if stop_event.is_set():
+                return
+            time.sleep(0.5)
 
 
 # ── Weather Fetch ─────────────────────────────────────────────────────────────
@@ -245,11 +275,26 @@ def animation_tick(base_rgb, t, has_rain, has_storm, has_wind, is_extreme_heat):
     return rgb
 
 
+# ── Rainbow (no-connection fallback) ─────────────────────────────────────────
+
+def build_rainbow_wheel(n):
+    """Precompute one full-spectrum wheel; cheap to rotate on a Pi Zero."""
+    return [tuple(int(c * 255) for c in colorsys.hsv_to_rgb(i / n, 1.0, 1.0))
+            for i in range(n)]
+
+
+def rainbow_frame(pixels, wheel, offset):
+    n = len(wheel)
+    for i in range(n):
+        pixels[i] = wheel[(i + offset) % n]
+    pixels.show()
+
+
 # ── Hardware Init ─────────────────────────────────────────────────────────────
 def init_strip():
     """Initialize the DotStar strip. Caller owns the returned object."""
     pixels = dotstar.DotStar(board.SCLK, board.MOSI, NUM_LEDS,
-                             brightness=1.0, auto_write=False)
+                             brightness=0.5, auto_write=False)
     pixels.fill((0, 0, 0))
     pixels.show()
     return pixels
@@ -272,8 +317,9 @@ def test_hardware(pixels):
 
 
 # ── Shutdown Handler ──────────────────────────────────────────────────────────
-def _shutdown(pixels):
+def _shutdown(pixels, stop_event):
     """SIGTERM handler: clear strip to black and exit cleanly (D-05, D-10)."""
+    stop_event.set()
     pixels.fill((0, 0, 0))
     pixels.show()
     sys.exit(0)
@@ -283,47 +329,33 @@ def _shutdown(pixels):
 
 def main():
     pixels = init_strip()
-    signal.signal(signal.SIGTERM, lambda sig, frame: _shutdown(pixels))  # D-10
+    state = WeatherState()
+    stop_event = threading.Event()
+    signal.signal(signal.SIGTERM, lambda s, f: _shutdown(pixels, stop_event))
 
-    # State
-    last_fetch_time = -FETCH_INTERVAL   # negative triggers immediate fetch on first pass
-    base_color      = get_season_color()  # D-11: season default until first successful fetch
-    has_rain        = False
-    has_storm       = False
-    has_wind        = False
+    fetcher = threading.Thread(target=fetch_worker, args=(state, stop_event), daemon=True)
+    fetcher.start()
+
+    wheel, rainbow_offset = build_rainbow_wheel(NUM_LEDS), 0
 
     print(f"[{datetime.now():%H:%M:%S}] Pi Weather Lights starting. "
-          f"Press Ctrl+C to stop.")
+          f"Press Ctrl+C to stop.", flush=True)
 
     try:
         while True:
-            now = time.monotonic()
+            ready, base_color, has_rain, has_storm, has_wind = state.snapshot()
 
-            # ── Hourly weather fetch ─────────────────────────────────────────
-            if now - last_fetch_time >= FETCH_INTERVAL:
-                raw = fetch_weather()
-                if raw is None:
-                    raw = fetch_open_meteo()
+            if not ready:
+                rainbow_frame(pixels, wheel, rainbow_offset)
+                rainbow_offset = (rainbow_offset + 1) % NUM_LEDS
+                time.sleep(FRAME_INTERVAL)
+                continue
 
-                if raw is not None and raw.get("temps"):
-                    avg_temp, has_rain, has_storm, has_wind = average_conditions(raw)
-                    base_color      = temp_to_color(avg_temp)
-                    last_fetch_time = now
-                    print(f"[{datetime.now():%H:%M:%S}] "
-                          f"Temp: {avg_temp:.1f}°F  "
-                          f"rain={has_rain} storm={has_storm} wind={has_wind}")
-                else:
-                    # D-10: hold last known color/flags; D-12: log to stderr
-                    print(f"[{datetime.now():%H:%M:%S}] Fetch failed — "
-                          f"holding last state.", file=sys.stderr)
-                    last_fetch_time = now   # avoid hammering API on repeated failure
-
-            # ── Animation frame ──────────────────────────────────────────────
-            is_extreme_heat = (base_color == COLOR_RED_FLASH)
+            t = time.monotonic()
             animated_rgb = animation_tick(
-                base_color, now,
+                base_color, t,
                 has_rain, has_storm, has_wind,
-                is_extreme_heat,
+                base_color == COLOR_RED_FLASH,
             )
             fill_color(pixels, animated_rgb)
             time.sleep(FRAME_INTERVAL)
@@ -331,6 +363,8 @@ def main():
     except KeyboardInterrupt:
         print("\nStopped.")
     finally:
+        stop_event.set()
+        fetcher.join(timeout=2)
         fill_color(pixels, (0, 0, 0))
         pixels.deinit()
 

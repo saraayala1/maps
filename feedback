@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+mkdir -p /home/javi/sara
+
+echo ""
+echo "  Feedback / Request"
+echo ""
+
+read -p "  Title (one or two words): " title
+read -p "  Description: " description
+
+filename=$(echo "$title" | tr '[:upper:]' '[:lower:]' | tr ' ' '_')
+filepath="/home/javi/sara/${filename}.txt"
+
+echo "$description" > "$filepath"
+
+echo ""
+echo "Your feedback has been added"
+echo ""

@@ -5,4 +5,4 @@
 # Cron entry: @reboot /home/javi/start_weather.sh >> /home/javi/weather_lights.log 2>&1
 
 source /home/javi/.env
-python3 /home/javi/weather_lights.py
+python3 /home/javi/weather_lights.py 2>&1 | tee -a /home/javi/weather_lights.log &
